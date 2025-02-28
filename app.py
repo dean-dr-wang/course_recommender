@@ -47,7 +47,7 @@ def call_openai_api(prompt):
 
 def generate_training_recommendations(profile_text, job_desc_text, aspirations):
     prompt = f"""
-    Based on the following information, suggest 3 relevant courses or trainings for the next 6-12 months:
+    Based on the following information, suggest 3 relevant courses or trainings for the next 6-12 months that will help the user achieve their career goals:
     
     **Professional Experience:**
     {profile_text}
@@ -58,12 +58,38 @@ def generate_training_recommendations(profile_text, job_desc_text, aspirations):
     **Career Aspirations:**
     {aspirations}
     
-    Provide a short description for each course.
+    Focus on the user's career goals and aspirations. Provide a short description for each course, explaining how it will help the user achieve their desired outcomes.
     """
     return call_openai_api(prompt)
 
 def generate_summary(text, context):
     prompt = f"Generate a concise and professional summary of the following {context}:\n{text}"
+    return call_openai_api(prompt)
+
+def chatbot_response(question, profile_text, job_desc_text, aspirations, training_recs):
+    context = f"""
+    **User's Professional Experience:**
+    {profile_text}
+    
+    **User's Job Description:**
+    {job_desc_text}
+    
+    **User's Career Aspirations:**
+    {aspirations}
+    
+    **Recommended Trainings:**
+    {training_recs}
+    """
+    prompt = f"""
+    You are a helpful career assistant chatbot. The user has provided the following information:
+    
+    {context}
+    
+    The user has asked the following question:
+    {question}
+    
+    Provide a helpful and concise response based on the user's profile, aspirations, and recommended trainings.
+    """
     return call_openai_api(prompt)
 
 # Streamlit App
@@ -114,27 +140,43 @@ with tab1:
         job_desc_text = st.session_state.get('job_desc_text', '')
         if st.button("Generate Training Recommendations"):
             training_recs = generate_training_recommendations(st.session_state['profile_text'], job_desc_text, st.session_state['aspirations'])
+            st.session_state['training_recs'] = training_recs
             st.write("### Recommended Trainings")
             st.write(training_recs)  # Display as plain text
+
+        # Chatbot for follow-up questions
+        if 'training_recs' in st.session_state:
+            st.header("Chatbot: Ask Follow-Up Questions")
+            user_question = st.text_input("Ask a question about your recommendations, profile, or aspirations:")
+            if user_question:
+                chatbot_answer = chatbot_response(
+                    user_question,
+                    st.session_state['profile_text'],
+                    st.session_state.get('job_desc_text', ''),
+                    st.session_state['aspirations'],
+                    st.session_state['training_recs']
+                )
+                st.write("**Chatbot Response:**")
+                st.write(chatbot_answer)
     else:
         st.warning("Please upload a profile and enter aspirations in the sidebar.")
 
 with tab2:
     st.header("Job Summary")
     if 'aspirations' in st.session_state:
-        if st.button("Generate Job Summary"):
-            job_summary = generate_summary(st.session_state['aspirations'], "career aspirations")
-            st.write("### Career/Lifestyle Aspirations Summary")
-            st.write(job_summary)
+        # Automatically generate and display the job/aspiration summary
+        job_summary = generate_summary(st.session_state['aspirations'], "career aspirations")
+        st.write("### Career/Lifestyle Aspirations Summary")
+        st.write(job_summary)
     else:
         st.warning("Please enter your aspirations in the sidebar.")
 
 with tab3:
     st.header("Experience Summary")
     if 'profile_text' in st.session_state:
-        if st.button("Generate Experience Summary"):
-            experience_summary = generate_summary(st.session_state['profile_text'], "professional experience")
-            st.write("### Professional Experience Summary")
-            st.write(experience_summary)
+        # Automatically generate and display the experience summary
+        experience_summary = generate_summary(st.session_state['profile_text'], "professional experience")
+        st.write("### Professional Experience Summary")
+        st.write(experience_summary)
     else:
         st.warning("Please upload a profile or enter LinkedIn details in the sidebar.")
