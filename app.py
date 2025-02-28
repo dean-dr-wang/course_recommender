@@ -77,6 +77,32 @@ def generate_summary(text, context):
     prompt = f"Generate a concise and professional summary of the following {context}:\n{text}"
     return call_openai_api(prompt)
 
+def chatbot_response(question, profile_text, job_desc_text, aspirations, training_recs):
+    context = f"""
+    **User's Professional Experience:**
+    {profile_text}
+    
+    **User's Job Description:**
+    {job_desc_text}
+    
+    **User's Career Aspirations:**
+    {aspirations}
+    
+    **Recommended Trainings:**
+    {training_recs}
+    """
+    prompt = f"""
+    You are a helpful career assistant chatbot. The user has provided the following information:
+    
+    {context}
+    
+    The user has asked the following question:
+    {question}
+    
+    Provide a helpful and concise response based on the user's profile, aspirations, and recommended trainings.
+    """
+    return call_openai_api(prompt)
+
 # Streamlit App
 st.title("Professional Training Recommender")
 
