@@ -45,21 +45,32 @@ def call_openai_api(prompt):
     except Exception as e:
         return f"Error in generating response: {str(e)}"
 
-def generate_job_recommendations(profile_text):
-    prompt = f"Based on the following professional profile, suggest 3 relevant job roles with short descriptions:\n{profile_text}"
-    return call_openai_api(prompt).split("\n")
+def generate_training_recommendations(profile_text, job_desc_text, aspirations):
+    prompt = f"""
+    Based on the following information, suggest 3 relevant courses or trainings for the next 6-12 months:
+    
+    **Professional Experience:**
+    {profile_text}
+    
+    **Job Description:**
+    {job_desc_text}
+    
+    **Career Aspirations:**
+    {aspirations}
+    
+    Provide a short description for each course.
+    """
+    return call_openai_api(prompt)
 
-def generate_training_recommendations(profile_text, aspirations):
-    prompt = f"Based on the following profile and career aspirations, suggest 3 relevant courses or trainings for the next 6-12 months:\nProfile: {profile_text}\nAspirations: {aspirations}"
-    return call_openai_api(prompt).split("\n")
+def generate_summary(text, context):
+    prompt = f"Generate a concise and professional summary of the following {context}:\n{text}"
+    return call_openai_api(prompt)
 
 # Streamlit App
 st.title("Professional Training Recommender")
 
-tabs = ["Upload Profile", "Job Recommendations", "Training Recommendations"]
-tab1, tab2, tab3 = st.tabs(tabs)
-
-with tab1:
+# Sidebar for inputs
+with st.sidebar:
     st.header("Upload Your CV or LinkedIn Profile")
     uploaded_file = st.file_uploader("Upload CV (PDF, DOCX, or TXT)", type=["pdf", "docx", "txt"], key="cv_upload")
     linkedin_text = st.text_area("Or paste your LinkedIn profile details manually", key="linkedin_input")
@@ -72,44 +83,58 @@ with tab1:
             profile_text = extract_text_from_docx(uploaded_file)
         elif uploaded_file.type == "text/plain":
             profile_text = extract_text_from_txt(uploaded_file)
-        st.text_area("Extracted Profile Data", profile_text, height=300, key="profile_display")
+        st.session_state['profile_text'] = profile_text
     
     if linkedin_text:
         profile_text += "\n" + linkedin_text
-        st.text_area("Extracted LinkedIn Data", linkedin_text, height=300, key="linkedin_display")
+        st.session_state['profile_text'] = profile_text
 
-    # Store profile_text in session state for use in other tabs
-    st.session_state['profile_text'] = profile_text
-
-with tab2:
-    st.header("Job Recommendations")
-    profile_text_input = st.text_area("Your Extracted Profile (from Tab 1)", st.session_state.get('profile_text', ''), height=150, key="profile_text_tab2")
-    
-    if st.button("Generate Job Recommendations"):
-        if profile_text_input:
-            job_recs = generate_job_recommendations(profile_text_input)
-            st.write("### Recommended Jobs")
-            for job in job_recs:
-                st.write(f"- {job}")
-        else:
-            st.warning("Please upload a profile or enter LinkedIn details in Tab 1.")
-    
+    st.header("Upload Job Description")
     uploaded_job_desc = st.file_uploader("Upload a Job Description (Optional)", type=["pdf", "docx"], key="job_desc_upload")
-    aspirations = st.text_area("Or enter your career/lifestyle aspirations", key="aspirations_input")
     
-    # Store aspirations in session state for use in Tab 3
+    job_desc_text = ""
+    if uploaded_job_desc:
+        if uploaded_job_desc.type == "application/pdf":
+            job_desc_text = extract_text_from_pdf(uploaded_job_desc)
+        elif uploaded_job_desc.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            job_desc_text = extract_text_from_docx(uploaded_job_desc)
+        st.session_state['job_desc_text'] = job_desc_text
+
+    st.header("Enter Career Aspirations")
+    aspirations = st.text_area("Enter your career/lifestyle aspirations", key="aspirations_input")
     st.session_state['aspirations'] = aspirations
 
-with tab3:
-    st.header("Training Recommendations")
-    profile_text_input = st.text_area("Your Extracted Profile (from Tab 1)", st.session_state.get('profile_text', ''), height=150, key="profile_text_tab3")
-    aspirations_input = st.text_area("Your Career/Lifestyle Aspirations (from Tab 2)", st.session_state.get('aspirations', ''), height=150, key="aspirations_text_tab3")
-    
-    if st.button("Generate Training Recommendations"):
-        if profile_text_input and aspirations_input:
-            training_recs = generate_training_recommendations(profile_text_input, aspirations_input)
+# Main content
+tabs = ["Course Recommendations", "Job Summary", "Experience Summary"]
+tab1, tab2, tab3 = st.tabs(tabs)
+
+with tab1:
+    st.header("Course Recommendations")
+    if 'profile_text' in st.session_state and 'aspirations' in st.session_state:
+        job_desc_text = st.session_state.get('job_desc_text', '')
+        if st.button("Generate Training Recommendations"):
+            training_recs = generate_training_recommendations(st.session_state['profile_text'], job_desc_text, st.session_state['aspirations'])
             st.write("### Recommended Trainings")
-            for training in training_recs:
-                st.write(f"- {training}")
-        else:
-            st.warning("Please complete Tab 1 and Tab 2 to generate training recommendations.")
+            st.write(training_recs)  # Display as plain text
+    else:
+        st.warning("Please upload a profile and enter aspirations in the sidebar.")
+
+with tab2:
+    st.header("Job Summary")
+    if 'aspirations' in st.session_state:
+        if st.button("Generate Job Summary"):
+            job_summary = generate_summary(st.session_state['aspirations'], "career aspirations")
+            st.write("### Career/Lifestyle Aspirations Summary")
+            st.write(job_summary)
+    else:
+        st.warning("Please enter your aspirations in the sidebar.")
+
+with tab3:
+    st.header("Experience Summary")
+    if 'profile_text' in st.session_state:
+        if st.button("Generate Experience Summary"):
+            experience_summary = generate_summary(st.session_state['profile_text'], "professional experience")
+            st.write("### Professional Experience Summary")
+            st.write(experience_summary)
+    else:
+        st.warning("Please upload a profile or enter LinkedIn details in the sidebar.")
