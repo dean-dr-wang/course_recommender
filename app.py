@@ -64,7 +64,7 @@ def generate_training_recommendations(profile_text, job_desc_text, aspirations):
 
 def generate_job_recommendations(profile_text):
     prompt = f"""
-    Based on the following professional experience, suggest 3 relevant job roles with short descriptions:
+    Based on the following professional experience, suggest 3 relevant new job roles with short descriptions:
     
     **Professional Experience:**
     {profile_text}
