@@ -104,7 +104,28 @@ def chatbot_response(question, profile_text, job_desc_text, aspirations, trainin
     return call_openai_api(prompt)
 
 # Streamlit App
-st.title("Professional Training Recommender")
+#st.title("Professional Training Recommender")
+
+# Inject custom CSS for background image
+st.markdown(
+    """
+    <style>
+    .title-background {
+        background-image: url('https://cdn.elearningindustry.com/wp-content/uploads/2023/01/shutterstock_2160978529.jpg');
+        background-size: cover;
+        padding:58px;
+        color: White;
+        text-align: Left;
+        border-radius: 10px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Streamlit App
+st.markdown('<div class="title-background"><h1>Training Course Recommender</h1></div>', unsafe_allow_html=True)
+
 
 # Sidebar for inputs
 with st.sidebar:
